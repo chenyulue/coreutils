@@ -9,27 +9,23 @@ when ExitStatus == QuitSuccess:
 else:
   const ProgramName = "false"
 
-const
-  Authors = "Chenyu Lue"
-  Version = "0.1.0"
-
 proc usage(status: int) =
   let usageMsg =
     """
 Usage: $1 [ignored command line arguments]
-   or: $1 OPTION
-"""
+   or: $1 OPTION"""
   echo usageMsg.format(programName)
 
   let descrpt =
     if ExitStatus == QuitSuccess:
-      "Exit with a status code indicating success."
+      "Exit with a status code indicating success.\n"
     else:
-      "Exit with a status code indicating failure."
+      "Exit with a status code indicating failure.\n"
   echo descrpt
 
   echo HelpOptionDescription
   echo VersionOptionDescription
+  echo ""
   echo UsageBuiltinWarning.format(ProgramName)
 
   quit(status)
@@ -41,7 +37,9 @@ proc main() =
     if paramStr(1) == "--help":
       usage(ExitStatus)
     if paramStr(1) == "--version":
-      echo "$1 ($2) by $3".format(ProgramName, Version, Authors)
+      echo versionStr.format(
+        ProgramName, Version, Author
+      )
 
   quit(ExitStatus)
 
