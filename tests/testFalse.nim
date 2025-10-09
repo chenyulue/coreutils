@@ -1,10 +1,9 @@
 import std/[unittest, osproc, strutils]
+import ../src/defs
 
 suite "test the false command":
   setup:
-    let
-      exe = "./bin/false"
-      version = "0.1.0"
+    let exe = "./bin/false"
 
   test "false return 1":
     let (output, errCode) = execCmdEx(exe)
@@ -22,4 +21,4 @@ suite "test the false command":
     let (output, errCode) = execCmdEx(exe & " --version")
     check:
       errCode == QuitFailure
-      version in output
+      Version in output

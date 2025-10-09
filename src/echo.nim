@@ -2,10 +2,7 @@ import std/[cmdline, envvars, exitprocs, assertions, strutils]
 import defs
 
 # if true, interprete backslash escapes by default.
-when not defined(DefaultEchoToXpg):
-  const DefaultEchoToXpg = false
-else:
-  const DefaultEchoToXpg = true
+const DefaultEchoToXpg {.booldefine.} = false
 
 const ProgramName = "echo"
 
@@ -53,7 +50,7 @@ If -e is in effect, the following sequences are recognized:
   echo UsageBuiltinWarning.format(ProgramName)
   quit(status)
 
-proc hextobin(c: char): int =
+proc hexToBin(c: char): int =
   case c
   of 'a', 'A':
     result = 10
@@ -69,6 +66,68 @@ proc hextobin(c: char): int =
     result = 15
   else:
     result = ord(c) - ord('0')
+
+proc writeWithEscape(s: string) =
+  var i = 0
+  while i < s.len:
+    var c = s[i]
+    if c == '\\':
+      case s[i + 1]
+      of 'a':
+        c = '\a'
+        inc i, 2
+      of 'b':
+        c = '\b'
+        inc i, 2
+      of 'c':
+        quit(QuitSuccess)
+      of 'e':
+        c = '\x1B'
+        inc i, 2
+      of 'f':
+        c = '\f'
+        inc i, 2
+      of 'n':
+        c = '\n'
+        inc i, 2
+      of 'r':
+        c = '\r'
+        inc i, 2
+      of 't':
+        c = '\t'
+        inc i, 2
+      of 'v':
+        c = '\v'
+        inc i, 2
+      of 'x':
+        if i <= s.len - 3 and s[i + 2] in HexDigits:
+          c = char(hexToBin(s[i + 2]))
+          inc i, 3
+          if i <= s.len - 4 and s[i + 3] in HexDigits:
+            c = char(hexToBin(s[i + 2]) * 16 + hexToBin(s[i + 3]))
+            inc i, 1
+        else:
+          inc i, 1
+      of '0':
+        c = char(0)
+        if i <= s.len - 3 and s[i + 2] >= '0' and s[i + 2] <= '7':
+          c = char(hexToBin(s[i + 2]))
+          inc i, 3
+          if i <= s.len - 4 and s[i + 3] >= '0' and s[i + 3] <= '7':
+            c = char(ord(c) * 8 + hexToBin(s[i + 3]))
+            inc i, 1
+            if i <= s.len - 5 and s[i + 4] >= '0' and s[i + 4] <= '7':
+              c = char(ord(c) * 8 + hexToBin(s[i + 4]))
+              inc i, 1
+        else:
+          inc i, 2
+      of '\\':
+        inc i, 2
+      else:
+        inc i, 1
+    else:
+      inc i, 1
+    stdout.write(c)
 
 proc main() =
   var displayReturn = true
@@ -112,9 +171,10 @@ proc main() =
   for i in start .. paramCount():
     var param = paramStr(i)
 
-    # if doV9 or posixlyCorrect:
-
-    stdout.write(param)
+    if doV9 or posixlyCorrect:
+      param.writeWithEscape()
+    else:
+      stdout.write(param)
     if i < paramCount():
       stdout.write(" ")
 
@@ -122,7 +182,6 @@ proc main() =
     stdout.write("\n")
 
   quit(QuitSuccess)
-
 
 when isMainModule:
   main()

@@ -1,10 +1,9 @@
 import std/[unittest, osproc, strutils]
+import ../src/defs
 
 suite "test the true command":
   setup:
-    let
-      exe = "./bin/true"
-      version = "0.1.0"
+    let exe = "./bin/true"
 
   test "true return 0":
     let (output, errCode) = execCmdEx(exe)
@@ -22,4 +21,4 @@ suite "test the true command":
     let (output, errCode) = execCmdEx(exe & " --version")
     check:
       errCode == QuitSuccess
-      version in output
+      Version in output
