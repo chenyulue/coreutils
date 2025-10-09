@@ -102,23 +102,23 @@ proc writeWithEscape(s: string) =
       of 'x':
         if i <= s.len - 3 and s[i + 2] in HexDigits:
           c = char(hexToBin(s[i + 2]))
-          inc i, 3
           if i <= s.len - 4 and s[i + 3] in HexDigits:
             c = char(hexToBin(s[i + 2]) * 16 + hexToBin(s[i + 3]))
             inc i, 1
+          inc i, 3
         else:
           inc i, 1
       of '0':
         c = char(0)
         if i <= s.len - 3 and s[i + 2] >= '0' and s[i + 2] <= '7':
           c = char(hexToBin(s[i + 2]))
-          inc i, 3
           if i <= s.len - 4 and s[i + 3] >= '0' and s[i + 3] <= '7':
             c = char(ord(c) * 8 + hexToBin(s[i + 3]))
-            inc i, 1
             if i <= s.len - 5 and s[i + 4] >= '0' and s[i + 4] <= '7':
               c = char(ord(c) * 8 + hexToBin(s[i + 4]))
               inc i, 1
+            inc i, 1
+          inc i, 3
         else:
           inc i, 2
       of '\\':
