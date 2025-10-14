@@ -64,3 +64,9 @@ suite "test the echo command":
     check:
       errCode == QuitSuccess
       output == "-g -e hello\\nworld\n"
+
+  test "echo -e \\":
+    let (output, errCode) = execCmdEx(exe & " -e \\")
+    check:
+      errCode == QuitSuccess
+      output == "\\\n"
