@@ -52,18 +52,10 @@ If -e is in effect, the following sequences are recognized:
 
 proc hexToBin(c: char): int =
   case c
-  of 'a', 'A':
-    result = 10
-  of 'b', 'B':
-    result = 11
-  of 'c', 'C':
-    result = 12
-  of 'd', 'D':
-    result = 13
-  of 'e', 'E':
-    result = 14
-  of 'f', 'F':
-    result = 15
+  of 'a' .. 'f':
+    result = ord(c) - ord('a') + 10
+  of 'A' .. 'F':
+    result = ord(c) - ord('A') + 10
   else:
     result = ord(c) - ord('0')
 
@@ -71,7 +63,7 @@ proc writeWithEscape(s: string) =
   var i = 0
   while i < s.len:
     var c = s[i]
-    if c == '\\':
+    if c == '\\' and i < s.len - 1:
       case s[i + 1]
       of 'a':
         c = '\a'
