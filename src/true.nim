@@ -1,45 +1,40 @@
-import std/[strutils, cmdline, exitprocs]
+import std/[strutils, cmdline, os]
 import defs
 
 when not declared(ExitStatus):
   const ExitStatus = QuitSuccess
 
-when ExitStatus == QuitSuccess:
-  const ProgramName = "true"
-else:
-  const ProgramName = "false"
+let programName = extractFilename(getAppFilename())
 
 proc usage(status: int) =
-  let usageMsg =
-    """
-Usage: $1 [ignored command line arguments]
-   or: $1 OPTION"""
-  echo usageMsg.format(programName)
+  let usageMsg = """
+Usage: 
+  $1 
+  $1 (--version | -h | --help)""".format(programName)
 
   let descrpt =
     if ExitStatus == QuitSuccess:
-      "Exit with a status code indicating success.\n"
+      "Exit with a status code indicating success."
     else:
-      "Exit with a status code indicating failure.\n"
-  echo descrpt
+      "Exit with a status code indicating failure."
 
-  echo HelpOptionDescription
-  echo VersionOptionDescription
-  echo ""
-  echo UsageBuiltinWarning.format(ProgramName)
+  let optionMsg =
+    """
+Options:
+  -h, --help     Show this help message
+      --version  Print version information"""
+
+  echo "$1\n\n$2\n\n$3".format(descrpt, usageMsg, optionMsg)
 
   quit(status)
 
 proc main() =
   if paramCount() == 1:
-    addExitProc(closeStdout)
-
-    if paramStr(1) == "--help":
-      usage(ExitStatus)
-    if paramStr(1) == "--version":
-      echo versionStr.format(
-        ProgramName, Version, Author
-      )
+    runWithIOErrorHandling:
+      if paramStr(1) == "--help":
+        usage(ExitStatus)
+      if paramStr(1) == "--version":
+        echo createVersionInfo(authors, version, programName)
 
   quit(ExitStatus)
 
