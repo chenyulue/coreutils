@@ -3,7 +3,7 @@ import ../src/defs
 
 suite "test the echo command":
   setup:
-    let exe = "./bin/echo"
+    let exe = "./build/bin/echo"
 
   test "echo --help":
     let (output, errCode) = execCmdEx(exe & " --help")
@@ -16,13 +16,13 @@ suite "test the echo command":
     check:
       errCode == QuitSuccess
       Version in output
-  
+
   test "echo a normal   string":
     let (output, errCode) = execCmdEx(exe & " a normal   string")
     check:
       errCode == QuitSuccess
       output == "a normal string\n"
-  
+
   test "echo hello\\nworld":
     let (output, errCode) = execCmdEx(exe & " hello\\nworld")
     check:

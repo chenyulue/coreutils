@@ -3,7 +3,7 @@ import ../src/defs
 
 suite "test the true command":
   setup:
-    let exe = "./bin/true"
+    let exe = "./build/bin/true"
 
   test "true return 0":
     let (output, errCode) = execCmdEx(exe)
