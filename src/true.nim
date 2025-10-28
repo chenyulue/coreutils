@@ -1,40 +1,40 @@
 import std/[strutils, cmdline, os]
+import therapist
 import defs
 
 when not declared(ExitStatus):
   const ExitStatus = QuitSuccess
 
-let programName = extractFilename(getAppFilename())
-
-proc usage(status: int) =
-  let usageMsg = """
-Usage: 
-  $1 
-  $1 (--version | -h | --help)""".format(programName)
-
-  let descrpt =
+let 
+  programName = extractFilename(getAppFilename())
+  versionInfo = createVersionInfo(authors, version, programName)
+  prolog =
     if ExitStatus == QuitSuccess:
       "Exit with a status code indicating success."
     else:
       "Exit with a status code indicating failure."
+  epilog = 
+    if ExitStatus == QuitSuccess:
+      "Note: it is possible to cause true to exit with nonzero status: with the " &
+       "--help or --version option, and with standard output already closed or " &
+       "redirected to a file that evokes an I/O error."
+    else:
+      ""
 
-  let optionMsg =
-    """
-Options:
-  -h, --help     Show this help message
-      --version  Print version information"""
-
-  echo "$1\n\n$2\n\n$3".format(descrpt, usageMsg, optionMsg)
-
-  quit(status)
+let trueSpec = (
+  help: newHelpArg(@["-h", "--help"], help="display this help and exit"),
+  version: newMessageArg(@["--version"], versionInfo, help="output version information and exit")
+)
 
 proc main() =
-  if paramCount() == 1:
-    runWithIOErrorHandling:
-      if paramStr(1) == "--help":
-        usage(ExitStatus)
-      if paramStr(1) == "--version":
-        echo createVersionInfo(authors, version, programName)
+  let (success, message) = parseOrMessage(trueSpec, prolog, epilog)
+  runWithIOErrorHandling:
+    if not success:
+      stderr.writeline message.get, "\n"
+      let helpMsg = renderHelp(trueSpec)
+      quit(helpMsg, ExitStatus)
+    elif message.isSome:
+      quit(message.get, ExitStatus)
 
   quit(ExitStatus)
 

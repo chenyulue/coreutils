@@ -14,3 +14,4 @@ switch("d", "Author=" & author)
 # Dependencies
 
 requires "nim >= 2.2.4"
+requires "therapist >= 0.3.0"

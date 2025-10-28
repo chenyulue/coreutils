@@ -1,4 +1,4 @@
-import std/os
+import std/[os, strutils]
 
 const
   HelpOptionDescription* = "      --help     display this help and exit"
@@ -38,16 +38,16 @@ template runWithIOErrorHandling*(body: untyped) =
       discard
     quit(QuitFailure)
 
-template createVersionInfo*(
+proc createVersionInfo*(
     authors: openArray[string], version: string, programName: string
-): string =
+): string {.inline.}=
   let authorStr = authors.join(", ")
   let appName = programName.split('.')[0]
 
-  """
+  result = """
 $1 (GNU coreutils in Nim) $2
 Copyright ©︎ 2025 $3.
-License MIT: The MIT License <https://mit-license.org/>
+License MIT: The MIT License <https://mit-license.org/>.
 This is free software: you are free to change and redistribute it.
 There is NO WARRANTY, to the extent permitted by law.
 
