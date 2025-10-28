@@ -28,12 +28,12 @@ let trueSpec = (
 
 proc main() =
   let (success, message) = parseOrMessage(trueSpec, prolog, epilog)
-  runWithIOErrorHandling:
-    if not success:
-      stderr.writeline message.get, "\n"
-      let helpMsg = renderHelp(trueSpec)
-      quit(helpMsg, ExitStatus)
-    elif message.isSome:
+  # true ignores any options or arguments except --help and --version, 
+  # and always exits with a status code indicating success.
+  if not success:
+    quit(ExitStatus)
+  elif message.isSome:
+    runWithIOErrorHandling:
       quit(message.get, ExitStatus)
 
   quit(ExitStatus)
