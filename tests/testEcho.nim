@@ -15,7 +15,7 @@ suite "test the echo command":
     let (output, errCode) = execCmdEx(exe & " --version")
     check:
       errCode == QuitSuccess
-      Version in output
+      version in output
 
   test "echo a normal   string":
     let (output, errCode) = execCmdEx(exe & " a normal   string")

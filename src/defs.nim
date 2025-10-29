@@ -1,28 +1,4 @@
-import std/[os, strutils]
-
-const
-  HelpOptionDescription* = "      --help     display this help and exit"
-  VersionOptionDescription* = "      --version  output version information and exit"
-  UsageBuiltinWarning* =
-    """
-NOTE: your shell may have its own version of $1, which usually supersedes
-the version described here.  Please refer to your shell's documentation
-for details about the options it supports."""
-  Author* {.strdefine.} = "unknown"
-  Version* {.strdefine.} = "unknown"
-  versionStr* = "$1 (Nim coreutils) $2 \n\nWritten by $3"
-
-let programName* = getAppFilename()
-
-proc c_exit(status: cint) {.importc: "_exit", header: "<unistd.h>", noreturn.}
-
-proc closeStdout*() =
-  try:
-    stdout.flushFile()
-    stdout.close()
-  except IOError:
-    stderr.writeLine "write error: ", osErrorMsg(osLastError())
-    c_exit(QuitFailure)
+import std/[os, strutils, enumerate]
 
 const
   authors* = ["Chenyu Lue"]
@@ -38,18 +14,27 @@ template runWithIOErrorHandling*(body: untyped) =
       discard
     quit(QuitFailure)
 
+proc toAuthorStr(authors: openArray[string]): string =
+  var authorSeq = newSeq[string](authors.len)
+  for index, author in enumerate(authors):
+    if index < authors.len - 2:
+      authorSeq[index] = author & ", "
+    elif index < authors.len - 1:
+      authorSeq[index] = author & " and "
+    else:
+      authorSeq[index] = author
+  result = authorSeq.join()
+
 proc createVersionInfo*(
     authors: openArray[string], version: string, programName: string
-): string {.inline.}=
-  let authorStr = authors.join(", ")
+): string {.inline.} =
+  let authorStr = authors.toAuthorStr()
   let appName = programName.split('.')[0]
 
   result = """
 $1 (GNU coreutils in Nim) $2
-Copyright ©︎ 2025 $3.
+Copyright ©︎ 2025 Chenyu Lue.
 License MIT: The MIT License <https://mit-license.org/>.
-This is free software: you are free to change and redistribute it.
-There is NO WARRANTY, to the extent permitted by law.
 
 Written by $3.""".format(
     appName, version, authorStr

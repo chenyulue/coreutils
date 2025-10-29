@@ -21,4 +21,4 @@ suite "test the true command":
     let (output, errCode) = execCmdEx(exe & " --version")
     check:
       errCode == QuitSuccess
-      Version in output
+      version in output

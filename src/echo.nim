@@ -1,38 +1,20 @@
-import std/[cmdline, envvars, exitprocs, assertions, strutils]
+import std/[cmdline, envvars, strutils, os, parseopt]
+import therapist
 import defs
 
 # if true, interprete backslash escapes by default.
 const DefaultEchoToXpg {.booldefine.} = false
 
-const ProgramName = "echo"
+let
+  defaultEscapeOn = if DefaultEchoToXpg: "(default)" else: ""
+  defaultEscapeOff = if DefaultEchoToXpg: "" else: "(default)"
 
-proc usage(status: int) =
-  assert status == QuitSuccess
-
-  let usageMsg =
+let
+  programName = extractFilename(getAppFilename())
+  versionInfo = createVersionInfo(authors, version, programName)
+  prolog = "Echo the STRING(s) to standard output."
+  epilog =
     """
-Usage: $1 [SHORT-OPTION]... [STRING]...
-   or: $1 LONG-OPTION"""
-  echo usageMsg.format(programName)
-
-  echo """
-Echo the STRING(s) to standard output.
-  
-  -n             do not output the trailing newline"""
-  let helpInfo =
-    if DefaultEchoToXpg:
-      """
-  -e             enable interpretation of backslash escapes (default)
-  -E             disable interpretation of backslash escapes"""
-    else:
-      """
-  -e             enable interpretation of backslash escapes
-  -E             disable interpretation of backslash escapes (default)"""
-  echo helpInfo
-  echo HelpOptionDescription
-  echo VersionOptionDescription
-  echo ""
-  echo """
 If -e is in effect, the following sequences are recognized:
   \\      backslash
   \a      alert (BEL)
@@ -46,11 +28,27 @@ If -e is in effect, the following sequences are recognized:
   \v      vertical tab
   \0NNN   byte with octal value NNN (1 to 3 digits)
   \xHH    byte with hexadecimal value HH (1 to 2 digits)"""
-  echo ""
-  echo UsageBuiltinWarning.format(ProgramName)
-  quit(status)
 
-proc hexToBin(c: char): int =
+let echoSpec = (
+  newline: newFlagArg(@["-n"], help = "do not output the trailing newline"),
+  escapeOn: newFlagArg(
+    @["-e"], help = "enable interpretation of backslash escapes " & defaultEscapeOn
+  ),
+  escapeOff: newFlagArg(
+    @["-E"], help = "disable interpretation of backslash escapes " & defaultEscapeOff
+  ),
+  args: newStringArg(
+    @["<args>"], help = "strings to be printed", multi = true, optional = true
+  ),
+  help: newHelpArg(@["-h", "--help"], help = "display this help and exit"),
+  version: newMessageArg(
+    @["--version"], versionInfo, help = "output version information and exit"
+  ),
+)
+
+type HexChar = range['0' .. '9'] | range['a' .. 'f'] | range['A' .. 'F']
+
+proc hexToBin(c: HexChar): int =
   case c
   of 'a' .. 'f':
     result = ord(c) - ord('a') + 10
@@ -59,7 +57,9 @@ proc hexToBin(c: char): int =
   else:
     result = ord(c) - ord('0')
 
-proc writeWithEscape(s: string) =
+proc escapeStr(s: string): (bool, string) =
+  var strEscaped = newStringOfCap(s.len)
+
   var i = 0
   while i < s.len:
     var c = s[i]
@@ -72,7 +72,8 @@ proc writeWithEscape(s: string) =
         c = '\b'
         inc i, 2
       of 'c':
-        quit(QuitSuccess)
+        # if \c is met, return immediately, and returned false means no further output for echo
+        return (false, strEscaped)
       of 'e':
         c = '\x1B'
         inc i, 2
@@ -102,11 +103,11 @@ proc writeWithEscape(s: string) =
           inc i, 1
       of '0':
         c = char(0)
-        if i <= s.len - 3 and s[i + 2] >= '0' and s[i + 2] <= '7':
+        if i <= s.len - 3 and s[i + 2] in ('0' .. '7'):
           c = char(hexToBin(s[i + 2]))
-          if i <= s.len - 4 and s[i + 3] >= '0' and s[i + 3] <= '7':
+          if i <= s.len - 4 and s[i + 3] in ('0' .. '7'):
             c = char(ord(c) * 8 + hexToBin(s[i + 3]))
-            if i <= s.len - 5 and s[i + 4] >= '0' and s[i + 4] <= '7':
+            if i <= s.len - 5 and s[i + 4] in ('0' .. '7'):
               c = char(ord(c) * 8 + hexToBin(s[i + 4]))
               inc i, 1
             inc i, 1
@@ -119,10 +120,16 @@ proc writeWithEscape(s: string) =
         inc i, 1
     else:
       inc i, 1
-    stdout.write(c)
+    strEscaped.add(c)
+
+  return (true, strEscaped)
 
 proc main() =
   var displayReturn = true
+
+  # If the `POSIXLY_CORRECT` environment variable is set, then when echo's first 
+  # argument is not -n, it outputs option-like arguments instead of treating them 
+  # as options.
   let posixlyCorrect = existsEnv("POSIXLY_CORRECT")
   var allowOptions =
     (not posixlyCorrect) or
@@ -133,14 +140,12 @@ proc main() =
   scripts won't barf.]#
   var doV9 = DefaultEchoToXpg
 
-  addExitProc(closeStdout)
-
   if allowOptions and paramCount() == 1:
     if paramStr(1) == "--help":
-      usage(QuitSuccess)
+      echo renderHelp(echoSpec, prolog, epilog)
     if paramStr(1) == "--version":
-      echo versionStr.format(ProgramName, Version, Author)
-      quit(QuitSuccess)
+      echo versionInfo
+    quit(QuitSuccess)
 
   var start: int = 1
   if allowOptions:
@@ -150,7 +155,7 @@ proc main() =
       # Once the parameter is not the allowed "-e", "-E" and "-n", break
       # the loop and output the remaining parameters
       if param != "-e" and param != "-E" and param != "-n":
-        start = i
+        start = i - 1
         break
 
       if param == "-e":
@@ -160,15 +165,20 @@ proc main() =
       if param == "-n":
         displayReturn = false
 
-  for i in start .. paramCount():
-    var param = paramStr(i)
+  let argsLeft = commandLineParams()[start .. ^1]
 
-    if doV9 or posixlyCorrect:
-      param.writeWithEscape()
-    else:
-      stdout.write(param)
-    if i < paramCount():
-      stdout.write(" ")
+  # if the POSIXLY_CORRECT environment variable is set,
+  # backslash escapes are always enabled
+  if doV9 or posixlyCorrect:
+    var outputStr = newSeqOfCap[string](argsLeft.len)
+    for arg in argsLeft:
+      let (outputNext, str) = escapeStr(arg)
+      outputStr.add(str)
+      if not outputNext:
+        break
+    stdout.write outputStr.join(" ")
+  else:
+    stdout.write argsLeft.join(" ")
 
   if displayReturn:
     stdout.write("\n")

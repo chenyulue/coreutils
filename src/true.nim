@@ -5,7 +5,7 @@ import defs
 when not declared(ExitStatus):
   const ExitStatus = QuitSuccess
 
-let 
+let
   programName = extractFilename(getAppFilename())
   versionInfo = createVersionInfo(authors, version, programName)
   prolog =
@@ -13,17 +13,19 @@ let
       "Exit with a status code indicating success."
     else:
       "Exit with a status code indicating failure."
-  epilog = 
+  epilog =
     if ExitStatus == QuitSuccess:
       "Note: it is possible to cause true to exit with nonzero status: with the " &
-       "--help or --version option, and with standard output already closed or " &
-       "redirected to a file that evokes an I/O error."
+        "--help or --version option, and with standard output already closed or " &
+        "redirected to a file that evokes an I/O error."
     else:
       ""
 
 let trueSpec = (
-  help: newHelpArg(@["-h", "--help"], help="display this help and exit"),
-  version: newMessageArg(@["--version"], versionInfo, help="output version information and exit")
+  help: newHelpArg(@["-h", "--help"], help = "display this help and exit"),
+  version: newMessageArg(
+    @["--version"], versionInfo, help = "output version information and exit"
+  ),
 )
 
 proc main() =
