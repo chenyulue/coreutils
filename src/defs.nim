@@ -1,4 +1,4 @@
-import std/[os, strutils, enumerate]
+import std/[strutils, enumerate]
 
 const
   authors* = ["Chenyu Lue"]

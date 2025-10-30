@@ -1,4 +1,4 @@
-import std/[cmdline, envvars, strutils, os, parseopt]
+import std/[cmdline, envvars, strutils, os]
 import therapist
 import defs
 
@@ -143,9 +143,10 @@ proc main() =
   if allowOptions and paramCount() == 1:
     if paramStr(1) == "--help":
       echo renderHelp(echoSpec, prolog, epilog)
+      quit(QuitSuccess)
     if paramStr(1) == "--version":
       echo versionInfo
-    quit(QuitSuccess)
+      quit(QuitSuccess)
 
   var start: int = 1
   if allowOptions:
@@ -155,7 +156,7 @@ proc main() =
       # Once the parameter is not the allowed "-e", "-E" and "-n", break
       # the loop and output the remaining parameters
       if param != "-e" and param != "-E" and param != "-n":
-        start = i - 1
+        start = i
         break
 
       if param == "-e":
@@ -165,20 +166,20 @@ proc main() =
       if param == "-n":
         displayReturn = false
 
-  let argsLeft = commandLineParams()[start .. ^1]
+  var argsLeft = newSeqOfCap[string](paramCount() - start + 1)
 
-  # if the POSIXLY_CORRECT environment variable is set,
-  # backslash escapes are always enabled
-  if doV9 or posixlyCorrect:
-    var outputStr = newSeqOfCap[string](argsLeft.len)
-    for arg in argsLeft:
-      let (outputNext, str) = escapeStr(arg)
-      outputStr.add(str)
+  for i in start .. paramCount():
+    # if the POSIXLY_CORRECT environment variable is set,
+    # backslash escapes are always enabled
+    if doV9 or posixlyCorrect:
+      let (outputNext, str) = escapeStr(paramStr(i))
+      argsLeft.add(str)
       if not outputNext:
         break
-    stdout.write outputStr.join(" ")
-  else:
-    stdout.write argsLeft.join(" ")
+    else:
+      argsLeft.add(paramStr(i))
+
+  stdout.write(argsLeft.join(" "))
 
   if displayReturn:
     stdout.write("\n")
