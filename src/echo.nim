@@ -46,16 +46,45 @@ let echoSpec = (
   ),
 )
 
-type HexChar = range['0' .. '9'] | range['a' .. 'f'] | range['A' .. 'F']
+proc parseHexEscape(s: string, i: var int): char = 
+  # initial value of i is the index of the '\'
+  if i + 2 >= s.len or s[i+2] notin HexDigits:
+    raise newException(ValueError, "Invalid hex escape sequence")
 
-proc hexToBin(c: HexChar): int =
-  case c
-  of 'a' .. 'f':
-    result = ord(c) - ord('a') + 10
-  of 'A' .. 'F':
-    result = ord(c) - ord('A') + 10
+  if i + 3 < s.len and s[i+3] in HexDigits:
+    result = char(parseHexInt(s[i+2 .. i+3]))
+    inc i, 4
   else:
-    result = ord(c) - ord('0')
+    result = char(parseHexInt(s[i+2 .. i+2]))
+    inc i, 3
+
+proc parseOctalEscape(s: string, i: var int): char = 
+  # initial value of i is the index of the '\'
+  var digits = 0
+  while digits < 3 and (i+2+digits) < s.len and s[i+2+digits] in ('0' .. '7'):
+    digits += 1
+
+  if digits == 0:
+    raise newException(ValueError, "Invalid octal escape sequence")
+
+  result = char(parseOctInt(s[i+2 ..< i+2+digits]))
+  inc i, digits+2
+
+proc parseSimpleEscape(c: char, i: var int): char =
+  case c
+  of 'a': result = '\a'
+  of 'b': result = '\b'
+  of 'e': result = '\x1B'
+  of 'f': result = '\f'
+  of 'n': result = '\n'
+  of 'r': result = '\r'
+  of 't': result = '\t'
+  of 'v': result = '\v'
+  of '\\': result = '\\'
+  else: 
+    raise newException(ValueError, "Unknown escape sequence: \\" & $c)
+
+  inc i, 2
 
 proc escapeStr(s: string): (bool, string) =
   var strEscaped = newStringOfCap(s.len)
@@ -65,61 +94,27 @@ proc escapeStr(s: string): (bool, string) =
     var c = s[i]
     if c == '\\' and i < s.len - 1:
       case s[i + 1]
-      of 'a':
-        c = '\a'
-        inc i, 2
-      of 'b':
-        c = '\b'
-        inc i, 2
       of 'c':
         # if \c is met, return immediately, and returned false means no further output for echo
         return (false, strEscaped)
-      of 'e':
-        c = '\x1B'
-        inc i, 2
-      of 'f':
-        c = '\f'
-        inc i, 2
-      of 'n':
-        c = '\n'
-        inc i, 2
-      of 'r':
-        c = '\r'
-        inc i, 2
-      of 't':
-        c = '\t'
-        inc i, 2
-      of 'v':
-        c = '\v'
-        inc i, 2
       of 'x':
-        if i <= s.len - 3 and s[i + 2] in HexDigits:
-          c = char(hexToBin(s[i + 2]))
-          if i <= s.len - 4 and s[i + 3] in HexDigits:
-            c = char(hexToBin(s[i + 2]) * 16 + hexToBin(s[i + 3]))
-            inc i, 1
-          inc i, 3
-        else:
-          inc i, 1
+        try:
+          c = parseHexEscape(s, i)
+        except ValueError:
+          inc i
       of '0':
-        c = char(0)
-        if i <= s.len - 3 and s[i + 2] in ('0' .. '7'):
-          c = char(hexToBin(s[i + 2]))
-          if i <= s.len - 4 and s[i + 3] in ('0' .. '7'):
-            c = char(ord(c) * 8 + hexToBin(s[i + 3]))
-            if i <= s.len - 5 and s[i + 4] in ('0' .. '7'):
-              c = char(ord(c) * 8 + hexToBin(s[i + 4]))
-              inc i, 1
-            inc i, 1
-          inc i, 3
-        else:
+        try:
+          c = parseOctalEscape(s, i)
+        except ValueError:
           inc i, 2
-      of '\\':
-        inc i, 2
+          continue
       else:
-        inc i, 1
+        try:
+          c = parseSimpleEscape(s[i+1], i)
+        except ValueError:
+          inc i
     else:
-      inc i, 1
+      inc i
     strEscaped.add(c)
 
   return (true, strEscaped)

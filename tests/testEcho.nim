@@ -70,3 +70,9 @@ suite "test the echo command":
     check:
       errCode == QuitSuccess
       output == "\\\n"
+
+  test "echo -e Hello\\0World\\t!\\xZZZ":
+    let (output, errCode) = execCmdEx(exe & " -e Hello\\0World\\t!\\xZZZ")
+    check:
+      errCode == QuitSuccess
+      output == "HelloWorld\t!\\xZZZ\n"
