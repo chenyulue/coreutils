@@ -40,48 +40,57 @@ let echoSpec = (
   args: newStringArg(
     @["<args>"], help = "strings to be printed", multi = true, optional = true
   ),
-  help: newHelpArg(@["-h", "--help"], help = "display this help and exit"),
+  help: newHelpArg(@["--help"], help = "display this help and exit"),
   version: newMessageArg(
     @["--version"], versionInfo, help = "output version information and exit"
   ),
 )
 
-proc parseHexEscape(s: string, i: var int): char = 
+proc parseHexEscape(s: string, i: var int): char =
   # initial value of i is the index of the '\'
-  if i + 2 >= s.len or s[i+2] notin HexDigits:
+  if i + 2 >= s.len or s[i + 2] notin HexDigits:
     raise newException(ValueError, "Invalid hex escape sequence")
 
-  if i + 3 < s.len and s[i+3] in HexDigits:
-    result = char(parseHexInt(s[i+2 .. i+3]))
+  if i + 3 < s.len and s[i + 3] in HexDigits:
+    result = char(parseHexInt(s[i + 2 .. i + 3]))
     inc i, 4
   else:
-    result = char(parseHexInt(s[i+2 .. i+2]))
+    result = char(parseHexInt(s[i + 2 .. i + 2]))
     inc i, 3
 
-proc parseOctalEscape(s: string, i: var int): char = 
+proc parseOctalEscape(s: string, i: var int): char =
   # initial value of i is the index of the '\'
   var digits = 0
-  while digits < 3 and (i+2+digits) < s.len and s[i+2+digits] in ('0' .. '7'):
+  while digits < 3 and (i + 2 + digits) < s.len and s[i + 2 + digits] in ('0' .. '7'):
     digits += 1
 
   if digits == 0:
     raise newException(ValueError, "Invalid octal escape sequence")
 
-  result = char(parseOctInt(s[i+2 ..< i+2+digits]))
-  inc i, digits+2
+  result = char(parseOctInt(s[i + 2 ..< i + 2 + digits]))
+  inc i, digits + 2
 
 proc parseSimpleEscape(c: char, i: var int): char =
   case c
-  of 'a': result = '\a'
-  of 'b': result = '\b'
-  of 'e': result = '\x1B'
-  of 'f': result = '\f'
-  of 'n': result = '\n'
-  of 'r': result = '\r'
-  of 't': result = '\t'
-  of 'v': result = '\v'
-  of '\\': result = '\\'
-  else: 
+  of 'a':
+    result = '\a'
+  of 'b':
+    result = '\b'
+  of 'e':
+    result = '\x1B'
+  of 'f':
+    result = '\f'
+  of 'n':
+    result = '\n'
+  of 'r':
+    result = '\r'
+  of 't':
+    result = '\t'
+  of 'v':
+    result = '\v'
+  of '\\':
+    result = '\\'
+  else:
     raise newException(ValueError, "Unknown escape sequence: \\" & $c)
 
   inc i, 2
@@ -110,7 +119,7 @@ proc escapeStr(s: string): (bool, string) =
           continue
       else:
         try:
-          c = parseSimpleEscape(s[i+1], i)
+          c = parseSimpleEscape(s[i + 1], i)
         except ValueError:
           inc i
     else:
